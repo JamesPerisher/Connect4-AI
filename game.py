@@ -1,5 +1,7 @@
 from itertools import count
 
+from storage_types import Map2D
+
 
 class Base(object):
     def __init__(self, displaychar): # (self) Initialise base object with a display charecter
@@ -31,15 +33,11 @@ class Player(Base):
             except ValueError:
                 pass
 
-class Board(Base):
+class Board(Map2D):
     def __init__(self, player1, player2, width=7, height=6, connect=4): # (self) Initialise board with 2 players, width height and how many connected are required
+        Map2D.__init__(self, width, height, Empty("░")) # make the 2d map of board values
         # baord atributes
-        self.width = width
-        self.height = height
         self.n = connect
-        # initilaisation of data
-        self._empty = Empty("░")
-        self.data = [ [self._empty] * self.height for x in range(self.width)] # make an empty board
         self.winstate = None
         # store players reference and give them a reference to the board
         self.player1 = player1
@@ -49,10 +47,6 @@ class Board(Base):
 
     def __repr__(self): # (str) String representation of board object
         return "<%s(%s, %s, width=%s, height=%s, connect=%s)>"%(self.__class__.__name__, self.player1, self.player2, self.width, self.height, self.n)
-    def __iter__(self): # (generator) Make a generator for each (x,y) point on the board
-        for y in range(self.height):
-            for x in range(self.width):
-                yield x,y
 
     def render(self): # (str) Render the board
         lines = []
@@ -65,16 +59,10 @@ class Board(Base):
             lines[-1] += self.data[x][y].render() # adds the render of the object to the row
         return "\n".join(lines)
 
-    def raw_get(self, x, y): # (Player or Base) Get the value at (x, y) regardless of validity
-        try:
-            return self.data[x][y] # data value
-        except IndexError:
-            return self._empty # default value
-
     def iswinningset(self, states): # (bool) Checks if the states are valid as a winner
         states = list(states) # generate all objects in the generator
         if len(set(states)) == 1: # remove all repetition with set therefore will have length 1 if all the same object (inbuilt calucaulation in c for better efficiency)
-            if not states[0] == self._empty:
+            if not states[0] == self.default:
                 self.winstate = states[0]
                 return True
         return False
@@ -103,7 +91,7 @@ class Board(Base):
                 break
 
             if self.raw_get(x, n).__class__ == Player: # if player is below point (x, y)
-                if n == 0: return False
+                if n == 0: return False # if column is full
                 self.data[x][n-1] = player
                 break
 
