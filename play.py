@@ -6,11 +6,11 @@ from storage_types import AIStorage
 
 
 def play(): # (None) play a best choice ai against human
-    aip = AIStorage.from_file("monte_carlo_storage.json") # load current AI leaning from file
+    aip = AIStorage.from_db("database.db") # load current AI leaning from database
 
     p1 = Player("█")
     # p1 = AIPlayer(" ")
-    p2 = BestChoiceAIPlayer(aip, " ")
+    p2 = AIPlayer(aip, " ")
     b = Board(p1, p2)
 
     b.render() # show empty board

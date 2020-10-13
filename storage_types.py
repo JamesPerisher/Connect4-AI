@@ -1,6 +1,6 @@
 import copy
 import random
-import json
+import sqlite3
 
 from bisect import bisect
 
@@ -38,25 +38,50 @@ class Map2D(object):
         return new
 
 
-class AIStorage(dict):
-    def __init__(self, width, default, *args, **kwargs): # (self) Initialise defualt value based on width
-        super().__init__(*args, **kwargs)
+class AIStorage(): # There is no risk of SQL injection as no data comes from the client
+    def __init__(self, conn, c, width, default): # (self) Make object
+        self.conn = conn
+        self.c = c
         self.width=width
-        self.default=[default]*width
 
+        self.default=[default]*width # Initialise the default value
+        self.make_database() # Initialise the database
 
-    def __repr__(self): # (str) String representation of the object
-        return "<%s(width=%s, length=%s)>"%(self.__class__.__name__, self.width, len(self))
+    def make_database(self): # (None) Make the database table if not existing
+        self.c.execute("""
+        CREATE TABLE IF NOT EXISTS board_data_{:} (
+        id	INTEGER PRIMARY KEY AUTOINCREMENT,
+        boardstate	TEXT,
+        {:}
+        );""".format(self.width, ",\n".join(["        column_%s	INTEGER" % x for x in range(self.width)]))) # create self.width columns in the database acording to board size
 
-    def __getitem__(self, key): # (unknown) Gets the value with key "key" if not existoing add it and return default
+    def save(self): # (None) Save the database to file
+        self.conn.commit()
+
+    def isvalue(self, hash): # (bool) Check if hash exists in the table
+        self.c.execute("SELECT id FROM board_data_{:} WHERE boardstate=\"{:}\"".format(self.width, hash))
+        return not len(self.c.fetchall()) == 0
+
+    def __getitem__(self, hash):  # (unknown) Gets the value with key "key" if not existoing add it and return default
+        self.c.execute("SELECT * FROM board_data_{:} WHERE boardstate=\"{:}\"".format(self.width, hash))
         try:
-            return super().__getitem__(key)
-        except KeyError:
-            self[key] = self.default.copy()
-            return self[key]
+            return self.c.fetchall()[0][2::] # If can't get item doesnt exist yet
+        except Exception as e:
+            cc = self.default.copy()
+            self.new(hash, cc)
+            return cc
+
+    def new(self, hash, values): # (bool) makes new database entry
+        if self.isvalue(hash): return False # already exists ignore
+        self.c.execute("INSERT INTO board_data_{:} VALUES (NULL, \"{:}\", {:})".format(self.width, hash, ", ".join(str(x) for x in values)))
+        return True
+
+    def add(self, hash, index, amount): # (None) Add amount to a datapoint in the db
+        new_value = self[hash][index] + amount
+        self.c.execute("UPDATE board_data_{:} SET column_{:}={:} WHERE boardstate=\"{:}\"".format(self.width, index, new_value, hash))
+
 
     def make_choice(self, hash): # (int) Makes a choice between options based on stored wightings
-        # if not self[hash]: return random.choice(range(self.width))
         weights = self[hash]
         total = 0
         cum_weights = [] # acumulative weights
@@ -68,15 +93,7 @@ class AIStorage(dict):
         return out
 
     @classmethod
-    def from_file(cls, file, width=7, default=0): # (AIStorage) Make the object from a file contaning the data
-        open(file, "a").close() # make file if not exits
-        with open(file, "r") as f:
-            try:
-                data = json.load(f)
-            except json.decoder.JSONDecodeError:
-                data = {"width":width, "data":{}} # defautl value
-            return cls(data["width"], default, data["data"])
-
-    def to_file(self, file): # (None) Saves the data to a file in json format
-        with open(file, "w") as f:
-            json.dump({"width":self.width, "data":self}, f)
+    def from_db(cls, db_file, width=7, default=0): # (AIStorage) Make AIStorage object from a database file
+        conn = sqlite3.connect("database.db") # make connection to db
+        c = conn.cursor() # get a cursor
+        return cls(conn, c, width, default)
