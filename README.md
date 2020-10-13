@@ -1,1 +1,1 @@
-# Tic-Tac-Toe-AI
+# Connect4-AI
