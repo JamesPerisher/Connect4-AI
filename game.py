@@ -63,6 +63,19 @@ class AIPlayer(Player):
             return False
         return True
 
+class BestChoiceAIPlayer(AIPlayer):
+    def __init__(self, ai_storage, displaychar=" "): # (self) Initialise BestChoiceAIPlayer
+        super().__init__(ai_storage, displaychar)
+        self.ai_storage.make_choice = self.make_choice # overrides ai_storage's decision maker
+
+    def make_choice(self, view_hash): # (int) makes choice acording to best knows option
+        weights = self.ai_storage[view_hash]
+        values = list(range(self.ai_storage.width))
+        sorted_choices = sorted(zip(weights, values))
+        return sorted_choices[-1][1] # get the value formthe sorted options
+
+
+
 class Board(Map2D):
     def __init__(self, player1, player2, width=7, height=6, connect=4): # (self) Initialise board with 2 players, width height and how many connected are required
         Map2D.__init__(self, width, height, Empty("░")) # make the 2d map of board values
