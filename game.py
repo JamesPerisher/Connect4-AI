@@ -2,6 +2,8 @@ from itertools import count
 
 from storage_types import Map2D
 import hashlib
+import random
+
 
 class Base(object):
     def __init__(self, displaychar): # (self) Initialise base object with a display charecter
@@ -34,6 +36,16 @@ class Player(Base):
                 pass
         return True
 
+class RandomPlayer(Player):
+    @Player.hasboard
+    def play(self):  # (True) Make a play on the assigned board; return play validity
+        while True:
+            try:
+                if self.board.drop(random.randint(0, self.board.width+1), self): break # break on successfull play
+            except ValueError:
+                pass
+        return True
+
 class AIPlayer(Player):
     def __init__(self, ai_storage, displaychar=" "): # (self) make player based ai
         super().__init__(displaychar)
@@ -59,7 +71,7 @@ class AIPlayer(Player):
         self.moves[view_hash] = play
 
         if not self.board.drop(play, self): # if the move fails punish self and reward other
-            self.board.winner = self.board.player2
+            self.board.winner = self.board.default
             return False
         return True
 

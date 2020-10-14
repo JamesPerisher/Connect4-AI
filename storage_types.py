@@ -83,6 +83,8 @@ class AIStorage(): # There is no risk of SQL injection as no data comes from the
 
     def make_choice(self, hash): # (int) Makes a choice between options based on stored wightings
         weights = self[hash]
+        offset = min(weights)
+        weights = [x+offset for x in weights]
         total = 0
         cum_weights = [] # acumulative weights
         for w in weights:
